@@ -30,44 +30,76 @@
         </q-item-section>
       </q-item>
 -->
-      <q-item
+      <div
         v-for="item in module_list"
         :key="item.serial"
-        v-ripple>
-        <q-item-section
-          side>
-          <q-icon name="online_prediction"
-                  :class="{ 'text-blue': item.beacon }"
-          />
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ item.serial }}</q-item-label>
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ item.name }}</q-item-label>
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ item.product }}</q-item-label>
-        </q-item-section>
-        <q-item-section>
-          <q-btn
-            v-if="item.product!=='VirtualHub'"
-            rounded
-            @click="toogle_beacon(item.serial, !item.beacon)"
-            color="primary"
-            size="xs"
-            label="beacon"
-          />
-        </q-item-section>
-      </q-item>
+      >
+        <q-item
+          v-ripple>
+          <q-item-section
+            side>
+            <q-icon name="online_prediction"
+                    :class="{ 'text-blue': item.beacon }"
+            />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ item.serial }}</q-item-label>
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ item.name }}</q-item-label>
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ item.product }}</q-item-label>
+          </q-item-section>
+          <q-item-section>
+            <q-btn
+              v-if="item.product!=='VirtualHub'"
+              rounded
+              @click="toogle_beacon(item.serial, !item.beacon)"
+              color="primary"
+              size="xs"
+              label="beacon"
+            />
+          </q-item-section>
+        </q-item>
+        <div
+          v-if="show_functions">
+          <q-item
+            v-for="fun in item.functions"
+            :key="fun.hwid"
+            v-ripple>
+            <q-item-section
+              side>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ fun.funid }}</q-item-label>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ fun.fname }}</q-item-label>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ fun.fval }}</q-item-label>
+            </q-item-section>
+            <q-item-section>
+            </q-item-section>
+          </q-item>
+        </div>
+      </div>
     </q-list>
+    <q-toggle
+      class="on-right"
+      v-model="show_functions"
+      label="Show device functions"
+    />
+
   </q-page>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { YAPI, YErrorMsg, YModule } from 'yoctolib-esm/yocto_api_html.js';
+import { YAPI, YErrorMsg, YModule } from 'yoctolib-esm/yocto_api_html';
 import { Dialog, Loading, LocalStorage } from 'quasar';
+
 
 interface ModuleItem
 {
@@ -75,6 +107,7 @@ interface ModuleItem
   name: string;
   product: string;
   beacon: boolean;
+  functions: { 'funid': string, 'fname': string, 'fval': string }[],
 }
 
 export default defineComponent({
@@ -86,6 +119,7 @@ export default defineComponent({
       url: '127.0.0.1',
       timeout_ref: 0 as number,
       yapi_error: '' as string,
+      show_functions: false,
       module_list: [] as ModuleItem[]
     };
   },
@@ -104,13 +138,22 @@ export default defineComponent({
       this.module_list = [];
       let module = YModule.FirstModule();
       while (module) {
+        let serial = await module.get_serialNumber();
         let beacon = await module.get_beacon();
         let m: ModuleItem = {
-          serial: await module.get_serialNumber(),
+          serial: serial,
           product: await module.get_productName(),
           name: await module.get_logicalName(),
-          beacon: beacon == YModule.BEACON_ON
+          beacon: beacon == YModule.BEACON_ON,
+          functions: []
         };
+        let cnt = await module.functionCount();
+        for (let j = 0; j < cnt; j++) {
+          let funid = await module.functionId(j);
+          let fname: string = await module.functionName(j);
+          let fval: string = await module.functionValue(j);
+          m.functions.push({ funid, fname, fval });
+        }
         this.module_list.push(m);
         module = await module.nextModule();
       }
