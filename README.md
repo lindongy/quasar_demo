@@ -1,7 +1,7 @@
 # Quasar demo
 
 A simple demo application that use Yoctopuce TypeScript library with Quasar framework. See full article on our
-we site: https://www.yoctopuce.com/EN/article/experimentation-avec-le-framework-quasra
+we site: https://www.yoctopuce.com/EN/article/experimentation-with-the-quasar-framework
 
 ## Install the dependencies
 ```bash
